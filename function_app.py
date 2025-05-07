@@ -172,13 +172,13 @@ def object_detection(activitypayload):
     logging.info(f"Image data: {len(img_data)} bytes")
     image_data = base64.b64decode(img_data)
 
-    endpoint = os.environ["VISION_PREDICTION_URL"]
+    endpoint = os.environ["CUSTOM_VISION_PREDICTION_URL"]
     logging.info(f"Endpoint: {endpoint}")
-    key = os.environ["VISION_PREDICTION_KEY"]
+    key = os.environ["CUSTOM_VISION_PREDICTION_KEY"]
     logging.info(f"Key: {key}")
-    project_id = os.environ["CV_PROJECT_ID"]
+    project_id = os.environ["CUSTOM_VISION_PROJECT_ID"]
     logging.info(f"Project ID: {project_id}")
-    model_name = os.environ["CV_MODEL_NAME"]
+    model_name = os.environ["CUSTOM_VISION_ITERATION_NAME"]
     logging.info(f"Model Name: {model_name}")
 
     credentials = ApiKeyCredentials(in_headers={"Prediction-key": key})

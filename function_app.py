@@ -77,6 +77,21 @@ def vision_agent_orchestrator(context):
     )
     detections = [Prediction.model_validate_json(pred) for pred in predictions]
 
+    # Aggregate and filter detections
+    aggregated_detections = yield context.call_activity(
+        "aggregate_detections_activity",
+        json.dumps(
+            {"detections": predictions, "min_probability": prediction_threshold}
+        ),
+    )
+    logging.info(
+        f"Detected {len(detections)} objects across {len(aggregated_detections)} unique tags"
+    )
+    # Generate summary of the detected objects
+    for tag, tag_detections in aggregated_detections.items():
+        count = len(tag_detections)
+        logging.info(f"Found {count} {tag}{'s' if count > 1 else ''}")
+
     ### Make a call to Azure OpenAI to analyze the detected objects
     binary_image_data = base64.b64decode(b64_image)
     image = Image.open(BytesIO(binary_image_data))
@@ -135,8 +150,18 @@ def vision_agent_orchestrator(context):
             )
 
     results = yield context.task_all(tasks)
+
+    # Generate a summary of all detections with Azure Open AI
+    summary_result = yield context.call_activity(
+        "generate_summary", json.dumps({"detections": results})
+    )
+
+    # # Include summary in the final results
+    # final_results = {"detections": results, "summary": summary_result["summary"]}
+
     logging.info(f"===> Processing finished")
     logging.info("Returning from vision_agent_orchestrator")
+    # return final_results
     return results
 
 
@@ -270,3 +295,71 @@ def azure_openai_processing(activitypayload):
         "tag": json.loads(activitypayload).get("tag"),
         "probability": json.loads(activitypayload).get("probability"),
     }
+
+
+@myApp.activity_trigger(input_name="activitypayload")
+def generate_summary(activitypayload):
+    logging.info("Starting generate_summary activity")
+    client = AzureOpenAI(
+        azure_endpoint=os.environ["OPENAI_ENDPOINT"],
+        api_key=os.environ["OPENAI_KEY"],
+        api_version="2024-02-01",
+    )
+
+    data = json.loads(activitypayload)
+    detections = data.get("detections", [])
+
+    prompt = """You are an AI assistant analyzing a floor plan image. I will give you a list of detected objects with their tags and probabilities.
+    Please provide a concise summary of what was detected in the floor plan. Focus on:
+    1. The types of rooms/spaces detected
+    2. Notable features or patterns
+    3. Any potential inaccuracies or areas that need attention
+    
+    Here are the detections:
+    """
+
+    # Format detections for the prompt
+    detections_text = "\n".join(
+        [
+            f"- {det['tag']}: {det['model_response']} (confidence: {det['probability']:.1%})"
+            for det in detections
+        ]
+    )
+
+    messages = [{"role": "user", "content": f"{prompt}\n{detections_text}"}]
+
+    response = client.chat.completions.create(
+        model=os.environ["OPENAI_MODEL"],
+        messages=messages,
+        temperature=0.7,
+        max_tokens=500,
+    )
+
+    logging.info("Returning from generate_summary activity")
+    return {"summary": response.choices[0].message.content}
+
+
+@myApp.activity_trigger(input_name="activitypayload")
+def aggregate_detections_activity(activitypayload):
+    """
+    Activity function to aggregate detections by tag and filter by probability threshold.
+    Returns a dictionary with tags as keys and lists of detections as values.
+    Only includes detections above the minimum probability threshold.
+    """
+    logging.info("Starting aggregate_detections_activity")
+    data = json.loads(activitypayload)
+    detections = [Prediction.model_validate_json(det) for det in data["detections"]]
+    min_probability = data.get("min_probability", 0.5)
+
+    aggregated = {}
+    for detection in detections:
+        if detection.probability >= min_probability:
+            if detection.tag not in aggregated:
+                aggregated[detection.tag] = []
+            aggregated[detection.tag].append(detection)
+
+    # Sort detections within each tag by probability
+    for tag in aggregated:
+        aggregated[tag].sort(key=lambda x: x.probability, reverse=True)
+
+    return {tag: [det.dict() for det in dets] for tag, dets in aggregated.items()}

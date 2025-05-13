@@ -8,8 +8,10 @@
     "azureFunctions.projectLanguageModel": 2,
     "cSpell.words": [
         "activitypayload",
+        "cognitiveservices",
         "cola",
         "colb",
+        "customvision",
         "dotenv",
         "floorplan",
         "topcol"

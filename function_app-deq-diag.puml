@@ -1,54 +1,75 @@
 @startuml
 
-participant Client 
+participant Client
 participant "HTTP Trigger\nhttp_start" as HttpTrigger
 participant "Orchestrator\nvision_agent_orchestrator" as Orchestrator
 participant "Activity\nread_image" as ReadImage
 participant "Activity\nobject_detection" as ObjectDetection
-participant "Activity\naggregate_detections" as AggregateDetections
 participant "Activity\nazure_openai_processing" as OpenAIProcessing
+participant "Activity\naggregate_detections" as AggregateDetections
 participant "Activity\ngenerate_summary" as GenerateSummary
 participant AzureStorage
 participant CustomVision
 participant AzureOpenAI
 
-Client -> HttpTrigger: POST /api/orchestrators/{functionName} activate HttpTrigger
+Client -> HttpTrigger: POST /api/orchestrators/{functionName}
+activate HttpTrigger
 
-HttpTrigger -> Orchestrator: start_new(functionName, payload) note right: Payload includes:\n- container\n- filename\n- analyze_prompt\n- reference_filename\n- prediction_threshold activate Orchestrator
+HttpTrigger -> Orchestrator: start_new(functionName, payload)
+note right: Payload includes:\n- container\n- filename\n- analyze_prompt\n- reference_filename\n- prediction_threshold
+activate Orchestrator
 
-par Read Images in Parallel Orchestrator -> ReadImage: call_activity (main image) activate ReadImage
+par Read Images in Parallel
+Orchestrator -> ReadImage: call_activity (main image)
+activate ReadImage
+Orchestrator -> ReadImage: call_activity (reference image)
 ReadImage -> AzureStorage: download_blob
 ReadImage <-- AzureStorage: image bytes
-ReadImage --> Orchestrator: base64_image deactivate ReadImage
+ReadImage --> Orchestrator: base64_image 
 
-Orchestrator -> ReadImage: call_activity (reference image)
-activate ReadImage
 ReadImage -> AzureStorage: download_blob
 ReadImage <-- AzureStorage: image bytes
 ReadImage --> Orchestrator: base64_reference_image
 deactivate ReadImage
+end
 
-Orchestrator -> ObjectDetection: call_activity activate ObjectDetection note right: Uses Custom Vision\nPrediction Client
+Orchestrator -> ObjectDetection: call_activity
+activate ObjectDetection
+note right: Uses Custom Vision\nPrediction Client
 ObjectDetection -> CustomVision: detect_image
 ObjectDetection <-- CustomVision: predictions
-Orchestrator <-- ObjectDetection: filtered predictions deactivate ObjectDetection
-
-Orchestrator -> AggregateDetections: call_activity activate AggregateDetections note right: Filters predictions\nby threshold and\naggregates by tag
-Orchestrator <-- AggregateDetections: aggregated detections deactivate AggregateDetections
+Orchestrator <-- ObjectDetection: filtered predictions
+deactivate ObjectDetection
 
 par Process Detections in Parallel loop For each detection above threshold
-Orchestrator -> OpenAIProcessing: call_activity activate OpenAIProcessing note right: Crops image around\ndetection and analyzes\nwith OpenAI Vision
+Orchestrator -> OpenAIProcessing: call_activity
+activate OpenAIProcessing
+note right: Crops image around\ndetection and analyzes\nwith OpenAI Vision
 OpenAIProcessing -> AzureOpenAI: chat.completions.create
 OpenAIProcessing <-- AzureOpenAI: analysis response
-Orchestrator <-- OpenAIProcessing: processed detection deactivate OpenAIProcessing end end
+Orchestrator <-- OpenAIProcessing: processed detection
+deactivate OpenAIProcessing
+end
 
-Orchestrator -> GenerateSummary: call_activity activate GenerateSummary note right: Generates overall\nsummary of all\ndetections
+Orchestrator -> AggregateDetections: call_activity
+activate AggregateDetections
+note right: Filters predictions\nby threshold and\naggregates by tag
+Orchestrator <-- AggregateDetections: aggregated detections
+deactivate AggregateDetections
+
+Orchestrator -> GenerateSummary: call_activity
+activate GenerateSummary
+note right: Generates overall\nsummary of all\ndetections
 GenerateSummary -> AzureOpenAI: chat.completions.create
 GenerateSummary <-- AzureOpenAI: summary response
-Orchestrator <-- GenerateSummary: final summary deactivate GenerateSummary
+Orchestrator <-- GenerateSummary: final summary
+deactivate GenerateSummary
 
-Orchestrator -> HttpTrigger: return results note right: Results include:\n- detections\n- summary\n- aggregated_detections deactivate Orchestrator
+Orchestrator -> HttpTrigger: return results
+note right: Results include:\n- detections\n- summary\n- aggregated_detections
+deactivate Orchestrator
 
-Client <-- HttpTrigger: statusQueryGetUri deactivate HttpTrigger
+Client <-- HttpTrigger: statusQueryGetUri
+deactivate HttpTrigger
 
 @enduml

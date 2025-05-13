@@ -17,12 +17,14 @@ CONTAINER_NAME = os.getenv("CONTAINER_NAME")
 FUNCTION_START_URL = os.getenv("FUNCTION_START_URL")
 # FUNCTION_KEY = "your_function_key" # optional if not anonymous
 
+
 # --- Upload Helper ---
 def upload_to_blob(file, blob_name):
     blob_service = BlobServiceClient.from_connection_string(STORAGE_CONN_STR)
     blob_client = blob_service.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
     blob_client.upload_blob(file, overwrite=True)
     return blob_client.url
+
 
 # --- Trigger Function ---
 def start_durable_function(fp_url, ref_url, prompt):
@@ -38,6 +40,7 @@ def start_durable_function(fp_url, ref_url, prompt):
     status_query_url = response.json()["statusQueryGetUri"]
     return status_query_url
 
+
 # --- Poll Function ---
 def poll_function_status(status_url):
     while True:
@@ -47,6 +50,7 @@ def poll_function_status(status_url):
         if result["runtimeStatus"] in ["Completed", "Failed", "Terminated"]:
             return result
         time.sleep(5)  # A
+
 
 def draw_bounding_boxes(image, detections):
     """Draw bounding boxes on the image based on model detections."""
@@ -65,6 +69,7 @@ def draw_bounding_boxes(image, detections):
         draw.text((left, top - 10), detection["model_response"], fill="red")
     return image
 
+
 def crop_detected_regions(image, detections):
     """Crop regions from the image based on bounding boxes."""
     cropped_images = []
@@ -80,26 +85,36 @@ def crop_detected_regions(image, detections):
     return cropped_images
 
 
-st.set_page_config(layout="wide", page_title="Azure AI Vision Agent Floorplans", page_icon=":house_with_garden:")
+st.set_page_config(
+    layout="wide",
+    page_title="Azure AI Vision Agent Floorplans",
+    page_icon=":house_with_garden:",
+)
 st.title("Azure AI Vision Agent Floorplans")
 tab1, tab2 = st.tabs(["Settings", "Floor plan Analysis Output"])
 
 with tab1:
     topcol1, topcol2 = st.columns([0.2, 0.5], gap="small")
     with topcol1:
-        run_analysis = st.button("Run Analysis")       
+        run_analysis = st.button("Run Analysis")
 
     col1, col2, col3 = st.columns(3)
     with col1:
         st.subheader("Floor Plan upload")
-        fp_image = st.file_uploader("Upload Floor Plan", type=["jpg", "jpeg", "png"], key="floorplan")
-            # Store the uploaded image in session state
+        fp_image = st.file_uploader(
+            "Upload Floor Plan", type=["jpg", "jpeg", "png"], key="floorplan"
+        )
+        # Store the uploaded image in session state
         if fp_image is not None:
-            st.image(Image.open(st.session_state.floorplan), caption="Uploaded Floor Plan")
-            
+            st.image(
+                Image.open(st.session_state.floorplan), caption="Uploaded Floor Plan"
+            )
+
     with col2:
         st.subheader("Reference Image upload")
-        ref_image = st.file_uploader("Upload Reference Image", type=["jpg", "jpeg", "png"], key="legend")
+        ref_image = st.file_uploader(
+            "Upload Reference Image", type=["jpg", "jpeg", "png"], key="legend"
+        )
         if ref_image is not None:
             st.image(Image.open(st.session_state.legend), caption="Uploaded Reference")
     with col3:
@@ -109,20 +124,16 @@ with tab1:
         if os.path.exists(prompt_file_path):
             with open(prompt_file_path, "r") as f:
                 prompt_placeholder = f.read()
-        prompt = st.text_area("Prompt",prompt_placeholder, height=500, key="prompt")
+        prompt = st.text_area("Prompt", prompt_placeholder, height=500, key="prompt")
         save_prompt = st.button("Save Prompt")
-        
+
         if save_prompt:
             # Create a file with the prompt
-            entry = {
-                "timestamp": datetime.now().isoformat(),
-                "prompt": prompt
-            }
+            entry = {"timestamp": datetime.now().isoformat(), "prompt": prompt}
             prompts_file_path = os.path.join(os.getcwd(), "prompts.jsonl")
             with open(prompts_file_path, "a") as f:
                 f.write(json.dumps(entry) + "\n")
             st.success("Prompt saved successfully!")
-        
 
     result = None  # Initialize result to avoid undefined reference
 
@@ -133,7 +144,7 @@ with tab1:
                 ref_name = f"reference-{uuid.uuid4()}.png"
                 fp_url = upload_to_blob(fp_image, fp_name)
                 ref_url = upload_to_blob(ref_image, ref_name)
-            
+
             with st.spinner("Starting Azure Durable Function..."):
                 status_url = start_durable_function(fp_name, ref_name, prompt)
 
@@ -143,27 +154,26 @@ with tab1:
             st.success("Analysis completed successfully!")
         if result and result["runtimeStatus"] == "Completed":
             with tab2:
-                    if result["runtimeStatus"] == "Completed":
-                        st.success("Analysis completed successfully!")
-                        cola, colb = st.columns([2.5,1.5])
-                        with cola:
-                            st.subheader("Object Detection Output")
-                            image = Image.open(fp_image)
-                            detections = result["output"]
-                            image_with_boxes = draw_bounding_boxes(image, detections)
-                            st.image(image_with_boxes, caption="Detected Objects")
-                        with colb:
-                            cropped_images = crop_detected_regions(image, result["output"])
-                            st.subheader("Outputs")
-                            for cropped_img, detection in cropped_images:
-                                sub_col1, sub_col2 = st.columns([0.5,2])
-                                with sub_col1:
-                                    st.image(cropped_img, 
-                                             width=50)
-                                with sub_col2:
-                                    st.json(detection)
-                            st.subheader("Raw Output")
-                            st.json(result["output"])  # customize based on your actual function output
-                    else:
-                        st.error(f"Function failed with status: {result['runtimeStatus']}")
-                        st.json(result)
+                if result["runtimeStatus"] == "Completed":
+                    st.success("Analysis completed successfully!")
+                    cola, colb = st.columns([2.5, 1.5])
+                    with cola:
+                        st.subheader("Object Detection Output")
+                        image = Image.open(fp_image)
+                        detections = result["output"]
+                        image_with_boxes = draw_bounding_boxes(image, detections)
+                        st.image(image_with_boxes, caption="Detected Objects")
+                    with colb:
+                        cropped_images = crop_detected_regions(image, result["output"])
+                        st.subheader("Outputs")
+                        for cropped_img, detection in cropped_images:
+                            sub_col1, sub_col2 = st.columns([0.5, 2])
+                            with sub_col1:
+                                st.image(cropped_img, width=50)
+                            with sub_col2:
+                                st.json(detection)
+                        # st.subheader("Raw Output")
+                        # st.json(result["output"])  # customize based on your actual function output
+                else:
+                    st.error(f"Function failed with status: {result['runtimeStatus']}")
+                    st.json(result)

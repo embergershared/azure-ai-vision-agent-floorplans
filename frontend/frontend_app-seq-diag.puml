@@ -1,0 +1,64 @@
+@startuml
+skinparam sequenceMessageAlign center
+
+actor User
+participant "Streamlit\nFrontend" as Frontend
+participant "Azure Blob\nStorage" as Blob
+participant "Azure Durable\nFunction" as Function
+participant "Azure Custom\nVision" as Vision
+participant "Azure\nOpenAI" as OpenAI
+
+== Application Initialization ==
+User -> Frontend: Access application
+activate Frontend
+Frontend -> Frontend: Load configuration\n(.env file)
+Frontend -> Frontend: Read default prompt\n(default_aoai_prompt.txt)
+Frontend --> User: Display UI with tabs:\n1. Settings\n2. Analysis Summary\n3. Analysis Output
+deactivate Frontend
+
+== Analysis Workflow ==
+User -> Frontend: Upload floor plan
+User -> Frontend: Upload reference image
+User -> Frontend: Input/modify prompt
+User -> Frontend: Click "Run Analysis"
+activate Frontend
+
+Frontend -> Blob: upload_to_blob(floor plan)
+activate Blob
+Blob --> Frontend: floor plan URL
+deactivate Blob
+
+Frontend -> Blob: upload_to_blob(reference)
+activate Blob
+Blob --> Frontend: reference URL
+deactivate Blob
+
+Frontend -> Function: start_durable_function(urls, prompt)
+activate Function
+Function --> Frontend: status_query_url
+deactivate Function
+
+loop Until completion
+    Frontend -> Function: poll_function_status()
+    activate Function
+    Function -> Vision: Detect objects
+    Vision --> Function: Detection results
+    Function -> OpenAI: Analyze detections
+    OpenAI --> Function: Analysis results
+    Function --> Frontend: Status (In Progress)
+    deactivate Function
+end
+
+Frontend -> Frontend: draw_bounding_boxes()
+Frontend -> Frontend: crop_detected_regions()
+Frontend --> User: Display in tabs:\n1. Analysis Summary\n2. Object Detection\n3. Detailed Results
+deactivate Frontend
+
+== Optional: Save Prompt ==
+User -> Frontend: Click "Save Prompt"
+activate Frontend
+Frontend -> Frontend: Append to prompts.jsonl
+Frontend --> User: Success message
+deactivate Frontend
+
+@enduml

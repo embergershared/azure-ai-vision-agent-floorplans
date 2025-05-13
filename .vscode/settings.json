@@ -7,6 +7,11 @@
     "debug.internalConsoleOptions": "neverOpen",
     "azureFunctions.projectLanguageModel": 2,
     "cSpell.words": [
+        "activitypayload",
+        "cola",
+        "colb",
+        "dotenv",
+        "floorplan",
         "topcol"
     ]
 }

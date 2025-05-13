@@ -4,7 +4,7 @@
 		{
 			"label": "kill_func",
 			"type": "shell",
-			"command": "Stop-Process -Name func -Force -ErrorAction SilentlyContinue",
+			"command": "if (Get-Process -Name func -ErrorAction SilentlyContinue) { Write-Host 'Stopping func.exe...'; Stop-Process -Name func -Force }",
 			"presentation": {
 				"reveal": "never",
 				"panel": "shared"
@@ -24,7 +24,7 @@
 		{
 			"label": "terminate_func",
 			"type": "shell",
-			"command": "Stop-Process -Name func -Force -ErrorAction SilentlyContinue",
+			"command": "if (Get-Process -Name func -ErrorAction SilentlyContinue) { Write-Host 'Stopping func.exe...'; Stop-Process -Name func -Force }",
 			"presentation": {
 				"reveal": "never",
 				"panel": "shared"

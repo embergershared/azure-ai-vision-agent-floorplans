@@ -14,13 +14,6 @@
             ]
         },
         {
-            "name": "Python Debugger: Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
-        },
-        {
             "name": "Azure Functions Debug",
             "type": "debugpy",
             "request": "attach",
@@ -30,6 +23,13 @@
             },
             "preLaunchTask": "kill_and_start_func",
             "postDebugTask": "terminate_func"
+        },
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
         }
     ]
 }

@@ -157,11 +157,16 @@ def vision_agent_orchestrator(context):
     )
 
     # Include summary in the final results
-    final_results = {"detections": results, "summary": summary_result["summary"]}
+    # final_results = {"detections": results, "summary": summary_result["summary"]}
 
     logging.info(f"===> Processing finished")
     logging.info("Returning from vision_agent_orchestrator")
-    return final_results
+    return {
+        "detections": results,
+        "summary": summary_result["summary"],
+        "aggregated_detections": aggregated_detections,
+    }
+    # return final_results
     # return results
 
 
@@ -243,21 +248,21 @@ def azure_openai_processing(activitypayload):
         api_key=os.environ["OPENAI_KEY"],
         api_version="2024-02-01",
     )
-    prompt = """
-    Here's an image of a symbol and a legend
-    please match the symbol to the legend and give me the name of the symbol in the legend.
-    Use the exact symbol name as it appears in the legend, all in uppercase
-    only return the name of the symbol or No Match if there is no match
-    
-    Here is the legend
-"""
+    #     prompt = """
+    #     Here's an image of a symbol and a legend
+    #     please match the symbol to the legend and give me the name of the symbol in the legend.
+    #     Use the exact symbol name as it appears in the legend, all in uppercase
+    #     only return the name of the symbol or No Match if there is no match
+
+    #     Here is the legend
+    # """
     reference_img = json.loads(activitypayload).get("reference_img")
     detected_img = json.loads(activitypayload).get("image")
-    analyze_prompt = json.loads(activitypayload).get("analyze_prompt")
-    if analyze_prompt:
-        sys_prompt = analyze_prompt
-    else:
-        sys_prompt = prompt
+    sys_prompt = json.loads(activitypayload).get("analyze_prompt")
+    # if analyze_prompt:
+    #     sys_prompt = analyze_prompt
+    # else:
+    #     sys_prompt = prompt
 
     messages = [
         {

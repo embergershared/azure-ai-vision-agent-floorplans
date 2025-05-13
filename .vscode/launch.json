@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Streamlit",
+            "name": "Streamlit Debug",
             "type": "debugpy",
             "request": "launch",
             "module": "streamlit",
@@ -21,14 +21,15 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Attach to Python Functions",
+            "name": "Azure Functions Debug",
             "type": "debugpy",
             "request": "attach",
             "connect": {
                 "host": "localhost",
                 "port": 9091
             },
-            "preLaunchTask": "func: host start"
+            "preLaunchTask": "kill_and_start_func",
+            "postDebugTask": "terminate_func"
         }
     ]
 }

@@ -2,6 +2,36 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "kill_func",
+			"type": "shell",
+			"command": "Stop-Process -Name func -Force -ErrorAction SilentlyContinue",
+			"presentation": {
+				"reveal": "never",
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "kill_and_start_func",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"kill_func",
+				"pip install (functions)",
+				"func: host start"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "terminate_func",
+			"type": "shell",
+			"command": "Stop-Process -Name func -Force -ErrorAction SilentlyContinue",
+			"presentation": {
+				"reveal": "never",
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		},
+		{
 			"type": "func",
 			"label": "func: host start",
 			"command": "host start",

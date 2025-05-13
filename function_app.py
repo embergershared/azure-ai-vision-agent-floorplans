@@ -208,7 +208,7 @@ def object_detection(activitypayload):
     logging.info(f"Key: {key}")
     project_id = os.environ["CUSTOM_VISION_PROJECT_ID"]
     logging.info(f"Project ID: {project_id}")
-    model_name = os.environ["CUSTOM_VISION_ITERATION_NAME"]
+    model_name = os.environ["CUSTOM_VISION_ITERATION_PUBLISHED_NAME"]
     logging.info(f"Model Name: {model_name}")
 
     credentials = ApiKeyCredentials(in_headers={"Prediction-key": key})
@@ -295,9 +295,9 @@ def azure_openai_processing(activitypayload):
 
     logging.info("Returning from azure_openai_processing activity")
     return {
-        "model_response": response.choices[0].message.content,
+        "openai_response": response.choices[0].message.content,
         "bounding_box": json.loads(activitypayload).get("bounding_box"),
-        "tag": json.loads(activitypayload).get("tag"),
+        "custom_vision_tag": json.loads(activitypayload).get("tag"),
         "probability": json.loads(activitypayload).get("probability"),
     }
 
@@ -326,7 +326,7 @@ def generate_summary(activitypayload):
     # Format detections for the prompt
     detections_text = "\n".join(
         [
-            f"- {det['tag']}: {det['model_response']} (confidence: {det['probability']:.1%})"
+            f"- {det['custom_vision_tag']}: {det['openai_response']} (confidence: {det['probability']:.1%})"
             for det in detections
         ]
     )

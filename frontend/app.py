@@ -76,7 +76,7 @@ def draw_bounding_boxes(image, detections):
         # Draw rectangle
         draw.rectangle([left, top, left + width, top + height], outline="red", width=3)
         # Annotate with label
-        draw.text((left, top - 10), detection["model_response"], fill="red")
+        draw.text((left, top - 10), detection["openai_response"], fill="red")
     return image
 
 
@@ -185,7 +185,7 @@ with tab1:
                     # Display aggregated detections
                     st.subheader("Detected Elements")
                     st.write("Elements found in the floor plan:")
-                    for tag, detections in final_results["output"][
+                    for custom_vision_tag, detections in final_results["output"][
                         "aggregated_detections"
                     ].items():
                         count = len(detections)
@@ -193,7 +193,7 @@ with tab1:
                             sum(d["probability"] for d in detections) / count
                         )
                         st.write(
-                            f"- **{count} {tag}{'s' if count > 1 else ''}** "
+                            f"- **{count} {custom_vision_tag}{'s' if count > 1 else ''}** "
                             f"(average confidence of: {confidence_avg:.1%})"
                         )
 

@@ -87,11 +87,11 @@ def crop_detected_regions(image, detections):
 
 st.set_page_config(
     layout="wide",
-    page_title="Azure AI Vision Agent Floorplans",
+    page_title="Azure AI Vision Floor plans analyzer",
     page_icon=":house_with_garden:",
 )
-st.title("Azure AI Vision Agent Floorplans")
-tab1, tab2 = st.tabs(["Settings", "Floor plan Analysis Output"])
+st.title("Azure AI Vision Floor plans analyzer")
+tab1, tab3, tab2 = st.tabs(["Settings", "Analysis Summary", "Analysis Output"])
 
 with tab1:
     topcol1, topcol2 = st.columns([0.2, 0.5], gap="small")
@@ -118,7 +118,7 @@ with tab1:
         if ref_image is not None:
             st.image(Image.open(st.session_state.legend), caption="Uploaded Reference")
     with col3:
-        st.subheader("Analyze Prompt")
+        st.subheader("Analysis Prompt")
         prompt_placeholder = ""
         prompt_file_path = os.path.join(os.getcwd(), "prompt.txt")
         if os.path.exists(prompt_file_path):
@@ -149,31 +149,37 @@ with tab1:
                 status_url = start_durable_function(fp_name, ref_name, prompt)
 
             with st.spinner("Waiting for analysis to complete..."):
-                result = poll_function_status(status_url)
+                # result = poll_function_status(status_url)
+                final_results = poll_function_status(status_url)
         with topcol1:
             st.success("Analysis completed successfully!")
-        if result and result["runtimeStatus"] == "Completed":
+        # if result and result["runtimeStatus"] == "Completed":
+        if final_results and final_results["runtimeStatus"] == "Completed":
+            with tab3:
+                st.subheader("Analysis Summary")
+                st.markdown(final_results["output"]["summary"])
             with tab2:
-                if result["runtimeStatus"] == "Completed":
-                    st.success("Analysis completed successfully!")
-                    cola, colb = st.columns([2.5, 1.5])
-                    with cola:
-                        st.subheader("Object Detection Output")
-                        image = Image.open(fp_image)
-                        detections = result["output"]
-                        image_with_boxes = draw_bounding_boxes(image, detections)
-                        st.image(image_with_boxes, caption="Detected Objects")
-                    with colb:
-                        cropped_images = crop_detected_regions(image, result["output"])
-                        st.subheader("Outputs")
-                        for cropped_img, detection in cropped_images:
-                            sub_col1, sub_col2 = st.columns([0.5, 2])
-                            with sub_col1:
-                                st.image(cropped_img, width=50)
-                            with sub_col2:
-                                st.json(detection)
-                        # st.subheader("Raw Output")
-                        # st.json(result["output"])  # customize based on your actual function output
-                else:
-                    st.error(f"Function failed with status: {result['runtimeStatus']}")
-                    st.json(result)
+                st.success("Analysis completed successfully!")
+                cola, colb = st.columns([2.5, 1.5])
+                with cola:
+                    st.subheader("Object Detection Output")
+                    image = Image.open(fp_image)
+                    detections = final_results["output"]["detections"]
+                    image_with_boxes = draw_bounding_boxes(image, detections)
+                    st.image(image_with_boxes, caption="Detected Objects")
+                with colb:
+                    cropped_images = crop_detected_regions(
+                        image, final_results["output"]["detections"]
+                    )
+                    st.subheader("Outputs")
+                    for cropped_img, detection in cropped_images:
+                        sub_col1, sub_col2 = st.columns([0.5, 2])
+                        with sub_col1:
+                            st.image(cropped_img, width=50)
+                        with sub_col2:
+                            st.json(detection)
+                    # st.subheader("Raw Output")
+                    # st.json(result["output"])  # customize based on your actual function output
+        else:
+            st.error(f"Function failed with status: {final_results['runtimeStatus']}")
+            st.json(result)

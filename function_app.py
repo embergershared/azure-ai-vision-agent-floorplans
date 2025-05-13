@@ -87,7 +87,7 @@ def vision_agent_orchestrator(context):
     logging.info(
         f"Detected {len(detections)} objects across {len(aggregated_detections)} unique tags"
     )
-    # Generate summary of the detected objects
+    # Log summary of the detected objects
     for tag, tag_detections in aggregated_detections.items():
         count = len(tag_detections)
         logging.info(f"Found {count} {tag}{'s' if count > 1 else ''}")
@@ -144,11 +144,11 @@ def vision_agent_orchestrator(context):
                     "analyze_prompt": analyze_prompt,
                 }
             )
-
+            # Call Azure OpenAI to analyze the cropped image
             tasks.append(
                 context.call_activity("azure_openai_processing", detection_payload)
             )
-
+    # Wait for all Azure OpenAI processing tasks to complete and collect results
     results = yield context.task_all(tasks)
 
     # Generate a summary of all detections with Azure Open AI
@@ -156,13 +156,13 @@ def vision_agent_orchestrator(context):
         "generate_summary", json.dumps({"detections": results})
     )
 
-    # # Include summary in the final results
-    # final_results = {"detections": results, "summary": summary_result["summary"]}
+    # Include summary in the final results
+    final_results = {"detections": results, "summary": summary_result["summary"]}
 
     logging.info(f"===> Processing finished")
     logging.info("Returning from vision_agent_orchestrator")
-    # return final_results
-    return results
+    return final_results
+    # return results
 
 
 # Activity
